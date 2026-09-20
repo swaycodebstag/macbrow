@@ -7,6 +7,10 @@ case "${1:-start}" in
   start)
     if pgrep -f "agent.py console" >/dev/null; then echo "already running (pid $(pgrep -f 'agent.py console' | head -1))"; exit 0; fi
     set -a; [ -f .env.local ] && source .env.local; set +a
+    # Local addition: master.env is the single home for every key on this machine, so it is
+    # sourced last and wins. Without this, an unfilled placeholder left in .env.local silently
+    # overwrites the real key and the first TTS call dies with a header-validation error.
+    set -a; [ -f "$HOME/.config/blackstag/master.env" ] && source "$HOME/.config/blackstag/master.env"; set +a
     # Keys exported only in the interactive shell profile (e.g. ~/.zshrc) aren't visible to a
     # detached start; pull them in when missing.
     for v in TYPESAFE_API_KEY GRADIUM_API_KEY; do
