@@ -28,5 +28,39 @@ case "${1:-start}" in
     pgrep -fl "agent.py console" || echo "not running" ;;
   log)
     sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$LOG" | grep -E "user_transcript|macbrow\.router +route|\"role\": \"assistant\"" | sed -E 's/^ *[0-9:.]* *(DEBUG|INFO) *//' ;;
-  *) echo "usage: $0 start|stop|status|log"; exit 1 ;;
+  mute|unmute|toggle)
+    MUTE="${MACBROW_MUTE_FILE:-/tmp/macbrow-muted}"
+    case "$1" in
+      mute)   : > "$MUTE"; echo "muted" ;;
+      unmute) rm -f "$MUTE"; echo "live" ;;
+      toggle) if [ -f "$MUTE" ]; then rm -f "$MUTE"; echo "live"; else : > "$MUTE"; echo "muted"; fi ;;
+    esac ;;
+  panel)
+    # Live status banner. agent.py rewrites MACBROW_STATE_FILE on every state change;
+    # this redraws only when the line changes, so it is cheap to leave open all day.
+    STATE="${MACBROW_STATE_FILE:-/tmp/macbrow-state}"
+    printf '\033]0;macbrow\007\033[?25l'
+    trap 'printf "\033[0m\033[?25h\n"; exit 0' INT TERM
+    last=""
+    while true; do
+      if pgrep -f "agent.py console" >/dev/null 2>&1; then
+        s=$(cat "$STATE" 2>/dev/null); [ -z "$s" ] && s="starting"
+      else
+        s="not running"
+      fi
+      if [ "$s" != "$last" ]; then
+        case "$s" in
+          "HEARING YOU") c=$'\033[1;30;42m' ;;   # green: your voice is coming in
+          SPEAKING)      c=$'\033[1;30;45m' ;;   # magenta: it is talking
+          THINKING)      c=$'\033[1;30;46m' ;;   # cyan: routing or generating
+          listening)     c=$'\033[1;37;44m' ;;   # blue: idle, mic open
+          MUTED)         c=$'\033[1;37;100m' ;;  # grey: mic cut, nothing reaches it
+          *)             c=$'\033[1;37;41m' ;;   # red: stopped or unknown
+        esac
+        printf '\033[2J\033[H\n   %s  %-13s  \033[0m\n\n   %s\n' "$c" "$s" "ctrl-c to close this panel"
+        last="$s"
+      fi
+      sleep 0.2
+    done ;;
+  *) echo "usage: $0 start|stop|status|log|panel|mute|unmute|toggle"; exit 1 ;;
 esac

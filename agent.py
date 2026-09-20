@@ -10,8 +10,11 @@ LLM defaults to LiveKit Inference (openai/gpt-5-mini); MACBROW_LLM_PROVIDER=lmst
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from livekit import agents
@@ -32,6 +35,8 @@ Mac actions are handled by a fast tool router before you see the message, so any
 that reaches you is small talk or a quick question. Answer in one short spoken sentence.
 No markdown, no lists, no emoji, no follow-up questions."""
 
+STATE_FILE = Path(os.environ.get("MACBROW_STATE_FILE", "/tmp/macbrow-state"))
+MUTE_FILE = Path(os.environ.get("MACBROW_MUTE_FILE", "/tmp/macbrow-muted"))
 LLM_PROVIDER = os.environ.get("MACBROW_LLM_PROVIDER", "livekit")  # "livekit" | "lmstudio"
 LMSTUDIO_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
 
@@ -128,7 +133,53 @@ async def entrypoint(ctx: agents.JobContext) -> None:
         preemptive_generation=False,  # we decide per-turn whether the LLM runs at all
     )
 
+    # Local addition: publish the live state so `./console.sh panel` can show whether it is
+    # listening, hearing you, thinking or speaking. One line, rewritten in place.
+    flags = {"muted": False}
+
+    def _publish(state: str) -> None:
+        if flags["muted"] and state != "MUTED":
+            return  # while muted, the panel says MUTED and nothing else
+        try:
+            STATE_FILE.write_text(f"{state}\n")
+        except OSError:
+            pass
+
+    @session.on("user_state_changed")
+    def _on_user_state(ev: Any) -> None:
+        _publish("HEARING YOU" if ev.new_state == "speaking" else "listening")
+
+    @session.on("agent_state_changed")
+    def _on_agent_state(ev: Any) -> None:
+        if ev.new_state in ("thinking", "speaking"):
+            _publish(ev.new_state.upper())
+        elif ev.new_state == "listening":
+            _publish("listening")
+
+    _publish("starting")
+
+    # Local addition: mute is a file, so `./console.sh mute` works from any window without
+    # talking to the running process. The mic is cut at the session input, so nothing is
+    # transcribed, nothing is routed, and no audio leaves the machine while it is on.
+    async def _watch_mute() -> None:
+        while True:
+            want = MUTE_FILE.exists()
+            if want != flags["muted"]:
+                flags["muted"] = want
+                session.input.set_audio_enabled(not want)
+                if want:
+                    _publish("MUTED")
+                else:
+                    _publish("listening")
+                log.info("microphone %s", "muted" if want else "live")
+            await asyncio.sleep(0.3)
+
+    mute_task = asyncio.create_task(_watch_mute())
+
     async def _close() -> None:
+        mute_task.cancel()
+        flags["muted"] = False
+        _publish("stopped")
         await mac.aclose()
 
     ctx.add_shutdown_callback(_close)

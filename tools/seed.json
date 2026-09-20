@@ -462,6 +462,62 @@
     ]
   },
   {
+    "name": "aside_open",
+    "description": "Open a URL or a web search in a new tab in the Aside browser.",
+    "scope": null,
+    "args": [
+      {
+        "name": "query",
+        "kind": "text",
+        "instructions": "What to open in Aside: a URL, a domain, or the phrase to search for.",
+        "default": ""
+      }
+    ],
+    "script": "set q to \"{{query}}\"\nset AppleScript's text item delimiters to \" \"\nset parts to text items of q\nset AppleScript's text item delimiters to \"+\"\nset enc to parts as text\nset AppleScript's text item delimiters to \"\"\nif q is \"\" then\n  set q to \"https://www.google.com\"\nelse if q contains \".\" and q does not contain \" \" then\n  if q does not start with \"http\" then set q to \"https://\" & q\nelse\n  set q to \"https://www.google.com/search?q=\" & enc\nend if\ntell application \"Aside\"\n  activate\n  if (count of windows) = 0 then\n    make new window\n    set URL of active tab of front window to q\n  else\n    tell front window to make new tab with properties {URL:q}\n  end if\nend tell\nreturn q",
+    "speak": "done",
+    "examples": [
+      "open github dot com in aside",
+      "open a tab in aside for the livekit docs",
+      "search aside for peptide research"
+    ]
+  },
+  {
+    "name": "aside_new_tab",
+    "description": "Open a blank new tab in the Aside browser.",
+    "scope": "Aside",
+    "args": [],
+    "script": "tell application \"Aside\"\n  if (count of windows) = 0 then return \"no Aside window is open\"\nend tell\ntell application \"Aside\"\n  activate\n  tell front window to make new tab\nend tell\nreturn \"new tab\"",
+    "speak": "done",
+    "examples": [
+      "new tab in aside",
+      "open a blank tab in aside"
+    ]
+  },
+  {
+    "name": "aside_close_tab",
+    "description": "Close the current tab in the Aside browser.",
+    "scope": "Aside",
+    "args": [],
+    "script": "tell application \"Aside\"\n  if (count of windows) = 0 then return \"no Aside window is open\"\nend tell\ntell application \"Aside\" to close active tab of front window\nreturn \"closed tab\"",
+    "speak": "done",
+    "examples": [
+      "close this aside tab",
+      "close the tab in aside"
+    ]
+  },
+  {
+    "name": "aside_get_url",
+    "description": "Read out the URL of the current Aside browser tab.",
+    "scope": "Aside",
+    "args": [],
+    "script": "tell application \"Aside\"\n  if (count of windows) = 0 then return \"no Aside window is open\"\nend tell\ntell application \"Aside\" to return URL of active tab of front window",
+    "speak": "The current page is {result}",
+    "examples": [
+      "what page am i on in aside",
+      "read me the aside url"
+    ]
+  },
+  {
     "name": "notes_create",
     "description": "Create a new note in Apple Notes with dictated text.",
     "scope": null,
@@ -469,14 +525,16 @@
       {
         "name": "body",
         "kind": "text",
-        "instructions": "The text the user wants written into the new note."
+        "instructions": "Only the content the user dictated for the note, the words after 'that says', 'saying' or a colon. If the user just asked for a new note and dictated no content, this argument has no value.",
+        "default": ""
       }
     ],
-    "script": "tell application \"Notes\"\n  activate\n  make new note at folder \"Notes\" with properties {body:\"{{body}}\"}\nend tell\nreturn \"note created\"",
+    "script": "tell application \"Notes\"\n  activate\n  set theNote to make new note at folder \"Notes\" with properties {body:\"{{body}}\"}\n  show theNote\nend tell\nreturn \"note created\"",
     "speak": "done",
     "examples": [
       "make a note that says call the dentist",
-      "new note: ideas for the demo"
+      "new note: ideas for the demo",
+      "create a new note"
     ]
   },
   {

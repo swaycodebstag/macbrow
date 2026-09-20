@@ -257,7 +257,7 @@ class JevRouter:
         candidates = _span_candidates(utterance, MAX_TEXT_CANDIDATES)
         if not candidates:
             for spec in specs:
-                route.args[spec.name] = spec.default or utterance
+                route.args[spec.name] = _fallback(spec, utterance)
             return
         crit = {c: None for c in candidates}
         crit["__none__"] = "No part of the utterance is this argument"
@@ -276,7 +276,7 @@ class JevRouter:
         resp = await self.client.system_one(state=_state(utterance, ctx), questions=questions)
         for spec in specs:
             ans = resp.choices[spec.name]
-            value = ans.choice if ans.choice != "__none__" else (spec.default or utterance)
+            value = ans.choice if ans.choice != "__none__" else _fallback(spec, utterance)
             route.args[spec.name] = _clean_value(value)
             if route.weakest_arg is None or ans.confidence < route.weakest_arg[1]:
                 route.weakest_arg = (spec.name, float(ans.confidence))
@@ -330,6 +330,17 @@ def _web_goal_questions() -> dict[str, Any]:
 
 
 _WORD_RE = re.compile(r"\S+")
+
+
+def _fallback(spec: Any, utterance: str) -> str:
+    """Value for a text arg Jev could not find in the utterance.
+
+    An explicit default wins, including an empty one: a tool whose content argument is
+    optional declares `"default": ""` so "create a new note" makes an empty note instead
+    of a note whose body is the words "create a new note". Only when no default is
+    declared at all does the whole utterance stand in.
+    """
+    return spec.default if spec.default is not None else utterance
 
 
 def _span_candidates(utterance: str, max_candidates: int = 200) -> list[str]:
