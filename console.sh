@@ -28,6 +28,19 @@ case "${1:-start}" in
     pgrep -fl "agent.py console" || echo "not running" ;;
   log)
     sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$LOG" | grep -E "user_transcript|macbrow\.router +route|\"role\": \"assistant\"" | sed -E 's/^ *[0-9:.]* *(DEBUG|INFO) *//' ;;
+  hud)
+    # The desktop pill. Compiled on first use and whenever the source is newer.
+    BIN=build/macbrow-hud
+    if [ ! -x "$BIN" ] || [ hud/main.swift -nt "$BIN" ]; then
+      mkdir -p build
+      echo "building the HUD..."
+      swiftc -O -o "$BIN" hud/main.swift || { echo "build failed"; exit 1; }
+    fi
+    pkill -f "$PWD/$BIN" 2>/dev/null
+    nohup "$PWD/$BIN" >/dev/null 2>&1 &
+    echo "HUD up; click it to mute, drag to move, right-click to quit" ;;
+  hud-stop)
+    pkill -f "macbrow-hud" 2>/dev/null; echo "HUD closed" ;;
   mute|unmute|toggle)
     MUTE="${MACBROW_MUTE_FILE:-/tmp/macbrow-muted}"
     case "$1" in
@@ -62,5 +75,5 @@ case "${1:-start}" in
       fi
       sleep 0.2
     done ;;
-  *) echo "usage: $0 start|stop|status|log|panel|mute|unmute|toggle"; exit 1 ;;
+  *) echo "usage: $0 start|stop|status|log|hud|hud-stop|panel|mute|unmute|toggle"; exit 1 ;;
 esac
