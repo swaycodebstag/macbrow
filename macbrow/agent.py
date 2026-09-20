@@ -547,7 +547,7 @@ _STALL_HINTS = {
 
 # Tools that open a page without jev-ultrafast; they seed the "recent browser" context for follow-ups.
 BROWSER_OPENERS: dict[str, Callable[[dict[str, str]], str]] = {
-    "chrome_open": lambda a: "google" if a.get("site") in (None, "other") else a.get("site", "google"),
+    "browser_open": lambda a: "google" if a.get("site") in (None, "other") else a.get("site", "google"),
     "safari_open": lambda a: "google",
     "youtube_play": lambda a: "youtube",
 }

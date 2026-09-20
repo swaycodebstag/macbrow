@@ -23,6 +23,9 @@ LOCAL_STATE = Path.home() / "Library/Application Support/Google/Chrome/Local Sta
 PROFILE_EMAIL = os.environ.get("MACBROW_CHROME_PROFILE_EMAIL", "")  # empty: use Chrome's last-used profile
 PROFILE_DIR_OVERRIDE = os.environ.get("MACBROW_CHROME_PROFILE_DIR")  # e.g. "Profile 4"
 HOME_URL = os.environ.get("MACBROW_CHROME_HOME", "")  # empty = Chrome's new-tab page
+# The browser a plain "go to youtube" should use, with no browser named. Chrome keeps the
+# profile-pinned launch path; anything else is driven through its own scripting dictionary.
+BROWSER = os.environ.get("MACBROW_BROWSER", "Google Chrome")
 
 _cache: tuple[float, str] | None = None
 _TTL = 60.0
@@ -64,4 +67,4 @@ def profile_dir() -> str:
 
 def system_vars() -> dict[str, str]:
     """Built-in placeholders every tool script may use."""
-    return {"chrome_profile": profile_dir(), "chrome_home": HOME_URL}
+    return {"chrome_profile": profile_dir(), "chrome_home": HOME_URL, "browser": BROWSER}

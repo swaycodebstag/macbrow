@@ -21,7 +21,7 @@ ALLOWED_SEED = {
     "safari_reload",
     "safari_back",
     "chrome_get_url",
-    "chrome_open",
+    "browser_open",
     "youtube_play",
     "web_task",
     "chrome_close_tab",

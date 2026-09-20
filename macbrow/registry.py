@@ -32,7 +32,7 @@ SEED_PATH = TOOLS_DIR / "seed.json"
 LEARNED_PATH = TOOLS_DIR / "learned.json"
 
 MAX_CHOICE_OPTIONS = 255  # Jev Choice limit
-BUILTIN_PLACEHOLDERS = {"chrome_profile", "chrome_home"}  # filled by chrome.system_vars(), never by Jev
+BUILTIN_PLACEHOLDERS = {"chrome_profile", "chrome_home", "browser"}  # filled by chrome.system_vars(), never by Jev
 
 ArgKind = Literal["enum", "text"]
 DynamicSource = Literal["running_apps", "installed_apps", "apps"]
