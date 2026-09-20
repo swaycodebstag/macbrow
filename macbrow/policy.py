@@ -101,7 +101,11 @@ BLOCKED_PATHS = re.compile(
     r"(?<![\w.-])\.(zshrc|zprofile|zshenv|bashrc|bash_profile|profile|gitconfig|npmrc|pypirc|netrc|"
     r"ssh|aws|gnupg|config|claude|venv|pyenv|local|cargo|rustup|docker|kube|lmstudio|livekit)\b(?![\w-])|"
     r"site-packages|pyproject\.toml|requirements\.txt|package\.json|uv\.lock|poetry\.lock|"
-    r"Homebrew|/opt/homebrew|node_modules|\.plist\b|LaunchAgents|LaunchDaemons|Keychains)",
+    r"Homebrew|/opt/homebrew|node_modules|\.plist\b|LaunchAgents|LaunchDaemons|Keychains|"
+    # local addition: the operator's working folder, brains and secret store. Kept
+    # path-shaped so ordinary speech ("tell Rahmat Black Stag ships Friday") is unaffected;
+    # ~/.config/blackstag is already covered by the .config dotfile rule above.
+    r"Black(?:[ _-]|%20)?Stag(?:[ _-]|%20)?AIOS|master\.env|(?<![\w-])brains/)",
     re.IGNORECASE,
 )
 
@@ -115,6 +119,11 @@ BLOCKED_APPLESCRIPT = [
     (re.compile(r"\bdelete\b|\bmove\s+(to\s+)?trash\b", re.I), "deleting items"),
     (re.compile(r"\bmove\b(?!\s+(to\s+)?(the\s+)?(front|back|top|bottom))", re.I), "moving files"),
     (re.compile(r"\bduplicate\b", re.I), "duplicating files"),
+    # local addition: AppleScript cannot write to a file without a reference from
+    # `open for access`, so blocking that one verb closes the whole write path.
+    (re.compile(r"\bopen\s+for\s+access\b", re.I), "opening a file for writing"),
+    (re.compile(r"\bset\s+eof\b", re.I), "truncating a file"),
+    (re.compile(r"\bstore\s+script\b", re.I), "writing a script to disk"),
     (re.compile(r"\beject\b|\bmount volume\b|\bunmount\b", re.I), "mounting or ejecting volumes"),
     (
         re.compile(r"\b(dock|security|network|CD and DVD|expose|screen saver|universal access)\s+preferences\b", re.I),
@@ -219,7 +228,9 @@ def describe_for_llm() -> str:
         "- Never reference ~/Library, /Library, /System, /usr, /etc, /private, dotfiles (.zshrc, .ssh, .config, "
         ".venv), site-packages, pyproject.toml, package.json, node_modules, Homebrew, .plist files.\n"
         "- Never delete, move, duplicate, eject, empty the trash, shut down, restart, log out, sleep, change "
-        "dock/security/network/login-item preferences, touch the keychain, or use administrator privileges."
+        "dock/security/network/login-item preferences, touch the keychain, or use administrator privileges.\n"
+        "- Never write to a file: no `open for access`, `set eof` or `store script`.\n"
+        "- Never reference the Black Stag AIOS folder, any brains folder, or master.env."
     )
 
 
